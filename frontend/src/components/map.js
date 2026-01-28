@@ -1,14 +1,15 @@
 /**
  * Map Component
- * Handles Mapbox GL JS map initialization and event visualization
+ * Handles Leaflet.js map initialization and event visualization
+ * Uses OpenStreetMap tiles (100% free and open source)
  */
-
-const MAPBOX_TOKEN = 'YOUR_MAPBOX_TOKEN_HERE'; // Replace with actual token
 
 class MapComponent {
     constructor(containerId) {
         this.containerId = containerId;
         this.map = null;
+        this.markerCluster = null;
+        this.markers = [];
         this.onEventClick = null;
     }
 
@@ -18,194 +19,126 @@ class MapComponent {
     init(onEventClickCallback) {
         this.onEventClick = onEventClickCallback;
 
-        mapboxgl.accessToken = MAPBOX_TOKEN;
-        
-        this.map = new mapboxgl.Map({
-            container: this.containerId,
-            style: 'mapbox://styles/mapbox/dark-v11',
-            center: [0, 20], // Global view
+        // Create Leaflet map
+        this.map = L.map(this.containerId, {
+            center: [20, 0], // Global view
             zoom: 2,
-            projection: 'globe'
+            minZoom: 2,
+            maxZoom: 18,
+            worldCopyJump: true
         });
 
-        // Add navigation controls
-        this.map.addControl(new mapboxgl.NavigationControl());
+        // Add dark-themed OpenStreetMap tiles (CartoDB Dark Matter)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(this.map);
 
         // Add scale control
-        this.map.addControl(new mapboxgl.ScaleControl({
-            maxWidth: 200,
-            unit: 'metric'
-        }));
+        L.control.scale({
+            position: 'bottomleft',
+            metric: true,
+            imperial: false
+        }).addTo(this.map);
 
-        this.map.on('load', () => {
-            console.log('Map loaded successfully');
-            
-            // Add atmosphere effect
-            this.map.setFog({
-                color: 'rgb(186, 210, 235)',
-                'high-color': 'rgb(36, 92, 223)',
-                'horizon-blend': 0.02,
-                'space-color': 'rgb(11, 11, 25)',
-                'star-intensity': 0.6
-            });
+        // Initialize marker cluster group
+        this.markerCluster = L.markerClusterGroup({
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            iconCreateFunction: (cluster) => {
+                const count = cluster.getChildCount();
+                let size = 'small';
+                if (count > 30) size = 'large';
+                else if (count > 10) size = 'medium';
+                
+                return L.divIcon({
+                    html: `<div><span>${count}</span></div>`,
+                    className: `marker-cluster marker-cluster-${size}`,
+                    iconSize: L.point(40, 40)
+                });
+            }
         });
+
+        this.map.addLayer(this.markerCluster);
+
+        console.log('Map loaded successfully');
     }
 
     /**
      * Load events onto the map as clustered points
      */
     loadEvents(geojsonData) {
-        if (!this.map.getSource('events')) {
-            // Add source
-            this.map.addSource('events', {
-                type: 'geojson',
-                data: geojsonData,
-                cluster: true,
-                clusterMaxZoom: 14,
-                clusterRadius: 50
+        // Clear existing markers
+        this.clearEvents();
+
+        // Create markers for each event
+        geojsonData.features.forEach(feature => {
+            const coords = feature.geometry.coordinates;
+            const props = feature.properties;
+
+            // Determine marker color based on confidence
+            let markerColor = '#f44336'; // Low confidence (red)
+            if (props.confidence >= 0.7) markerColor = '#4caf50'; // High (green)
+            else if (props.confidence >= 0.5) markerColor = '#ffc107'; // Medium (yellow)
+
+            // Create custom icon
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="
+                    background-color: ${markerColor};
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                "></div>`,
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
             });
 
-            // Add cluster circle layer
-            this.map.addLayer({
-                id: 'clusters',
-                type: 'circle',
-                source: 'events',
-                filter: ['has', 'point_count'],
-                paint: {
-                    'circle-color': [
-                        'step',
-                        ['get', 'point_count'],
-                        '#64b5f6',
-                        10,
-                        '#42a5f5',
-                        30,
-                        '#2196f3'
-                    ],
-                    'circle-radius': [
-                        'step',
-                        ['get', 'point_count'],
-                        20,
-                        10,
-                        30,
-                        30,
-                        40
-                    ],
-                    'circle-opacity': 0.8
-                }
+            // Create marker
+            const marker = L.marker([coords[1], coords[0]], { icon });
+
+            // Create popup content
+            const popupContent = `
+                <div class="leaflet-popup-custom">
+                    <div class="popup-title">${props.title}</div>
+                    <div class="popup-type">${props.event_type}</div>
+                    <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+                        ${props.summary ? props.summary.substring(0, 100) + '...' : 'No summary available'}
+                    </p>
+                    <button onclick="mapComponent.onEventClick(${props.id})" 
+                            style="margin-top: 0.5rem; padding: 0.5rem 1rem; background-color: #64b5f6; 
+                                   border: none; border-radius: 4px; color: #0a0e27; 
+                                   font-weight: bold; cursor: pointer; width: 100%;">
+                        View Details
+                    </button>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent, {
+                maxWidth: 300,
+                className: 'custom-popup'
             });
 
-            // Add cluster count label
-            this.map.addLayer({
-                id: 'cluster-count',
-                type: 'symbol',
-                source: 'events',
-                filter: ['has', 'point_count'],
-                layout: {
-                    'text-field': '{point_count_abbreviated}',
-                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                    'text-size': 12
-                },
-                paint: {
-                    'text-color': '#ffffff'
-                }
-            });
+            // Add marker to cluster group
+            this.markerCluster.addLayer(marker);
+            this.markers.push(marker);
+        });
 
-            // Add unclustered points
-            this.map.addLayer({
-                id: 'unclustered-point',
-                type: 'circle',
-                source: 'events',
-                filter: ['!', ['has', 'point_count']],
-                paint: {
-                    'circle-color': [
-                        'case',
-                        ['>=', ['get', 'confidence'], 0.7], '#4caf50', // High confidence
-                        ['>=', ['get', 'confidence'], 0.5], '#ffc107', // Medium confidence
-                        '#f44336' // Low confidence
-                    ],
-                    'circle-radius': 8,
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#fff',
-                    'circle-opacity': 0.9
-                }
-            });
-
-            // Click event for clusters
-            this.map.on('click', 'clusters', (e) => {
-                const features = this.map.queryRenderedFeatures(e.point, {
-                    layers: ['clusters']
-                });
-                const clusterId = features[0].properties.cluster_id;
-                this.map.getSource('events').getClusterExpansionZoom(
-                    clusterId,
-                    (err, zoom) => {
-                        if (err) return;
-                        this.map.easeTo({
-                            center: features[0].geometry.coordinates,
-                            zoom: zoom
-                        });
-                    }
-                );
-            });
-
-            // Click event for unclustered points
-            this.map.on('click', 'unclustered-point', (e) => {
-                const coordinates = e.features[0].geometry.coordinates.slice();
-                const properties = e.features[0].properties;
-
-                // Ensure proper coordinate wrapping for antimeridian
-                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                }
-
-                // Show popup
-                new mapboxgl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML(`
-                        <div class="popup-title">${properties.title}</div>
-                        <div class="popup-type">${properties.event_type}</div>
-                        <p style="margin-top: 0.5rem; font-size: 0.85rem;">
-                            ${properties.summary.substring(0, 100)}...
-                        </p>
-                        <button onclick="mapComponent.onEventClick(${properties.id})" 
-                                style="margin-top: 0.5rem; padding: 0.5rem 1rem; background-color: #64b5f6; 
-                                       border: none; border-radius: 4px; color: #0a0e27; 
-                                       font-weight: bold; cursor: pointer;">
-                            View Details
-                        </button>
-                    `)
-                    .addTo(this.map);
-            });
-
-            // Change cursor on hover
-            this.map.on('mouseenter', 'clusters', () => {
-                this.map.getCanvas().style.cursor = 'pointer';
-            });
-            this.map.on('mouseleave', 'clusters', () => {
-                this.map.getCanvas().style.cursor = '';
-            });
-            this.map.on('mouseenter', 'unclustered-point', () => {
-                this.map.getCanvas().style.cursor = 'pointer';
-            });
-            this.map.on('mouseleave', 'unclustered-point', () => {
-                this.map.getCanvas().style.cursor = '';
-            });
-
-        } else {
-            // Update existing source
-            this.map.getSource('events').setData(geojsonData);
-        }
+        console.log(`Loaded ${geojsonData.features.length} events to map`);
     }
 
     /**
      * Clear all events from the map
      */
     clearEvents() {
-        if (this.map.getSource('events')) {
-            this.map.getSource('events').setData({
-                type: 'FeatureCollection',
-                features: []
-            });
+        if (this.markerCluster) {
+            this.markerCluster.clearLayers();
+            this.markers = [];
         }
     }
 
@@ -213,10 +146,8 @@ class MapComponent {
      * Fly to a specific location
      */
     flyTo(lat, lon, zoom = 10) {
-        this.map.flyTo({
-            center: [lon, lat],
-            zoom: zoom,
-            duration: 2000
+        this.map.flyTo([lat, lon], zoom, {
+            duration: 2
         });
     }
 }
