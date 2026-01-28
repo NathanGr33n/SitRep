@@ -341,21 +341,30 @@ body {
     text-decoration: underline;
 }
 
-/* Mapbox Popup Customization */
-.mapboxgl-popup-content {
+/* Leaflet Popup Customization */
+.leaflet-popup-content-wrapper {
     background-color: #1a1f3a;
     color: #e0e0e0;
     border-radius: 4px;
-    padding: 1rem;
+    padding: 0;
 }
 
-.mapboxgl-popup-close-button {
-    color: #b0b0b0;
+.leaflet-popup-content {
+    margin: 1rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.leaflet-popup-close-button {
+    color: #b0b0b0 !important;
     font-size: 1.5rem;
 }
 
-.mapboxgl-popup-close-button:hover {
-    color: #64b5f6;
+.leaflet-popup-close-button:hover {
+    color: #64b5f6 !important;
+}
+
+.leaflet-popup-tip {
+    background-color: #1a1f3a;
 }
 
 .popup-title {
@@ -368,6 +377,76 @@ body {
     font-size: 0.8rem;
     color: #b0b0b0;
     text-transform: uppercase;
+}
+
+/* Leaflet Marker Clusters */
+.marker-cluster {
+    background-color: rgba(100, 181, 246, 0.6);
+    border-radius: 50%;
+}
+
+.marker-cluster div {
+    width: 30px;
+    height: 30px;
+    margin-left: 5px;
+    margin-top: 5px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: #64b5f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marker-cluster span {
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.marker-cluster-small {
+    background-color: rgba(100, 181, 246, 0.6);
+}
+
+.marker-cluster-small div {
+    background-color: #64b5f6;
+}
+
+.marker-cluster-medium {
+    background-color: rgba(66, 165, 245, 0.6);
+}
+
+.marker-cluster-medium div {
+    background-color: #42a5f5;
+    width: 35px;
+    height: 35px;
+}
+
+.marker-cluster-large {
+    background-color: rgba(33, 150, 243, 0.6);
+}
+
+.marker-cluster-large div {
+    background-color: #2196f3;
+    width: 40px;
+    height: 40px;
+}
+
+/* Custom Marker Styling */
+.custom-marker {
+    background: transparent;
+    border: none;
+}
+
+/* Leaflet Attribution */
+.leaflet-control-attribution {
+    background-color: rgba(26, 31, 58, 0.8) !important;
+    color: #b0b0b0 !important;
+    font-size: 0.7rem;
+}
+
+.leaflet-control-attribution a {
+    color: #64b5f6 !important;
 }
 
 /* Scrollbar Styling */
