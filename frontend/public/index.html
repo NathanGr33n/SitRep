@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SitRep - Security Event Intelligence Dashboard</title>
+    
+    <!-- Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="../src/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>SitRep</h1>
+                <p class="subtitle">Global Security Event Intelligence</p>
+            </div>
+            <div class="stats-summary" id="stats-summary">
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-total">0</span>
+                    <span class="stat-label">Total Events</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-high-conf">0</span>
+                    <span class="stat-label">High Confidence</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Filters Sidebar -->
+            <aside class="sidebar">
+                <h2>Filters</h2>
+                
+                <div class="filter-group">
+                    <label for="filter-days">Time Range</label>
+                    <select id="filter-days">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="180">Last 6 Months</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filter-confidence">Minimum Confidence</label>
+                    <input type="range" id="filter-confidence" min="0" max="1" step="0.1" value="0.3">
+                    <span id="confidence-value">0.3</span>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filter-event-type">Event Type</label>
+                    <select id="filter-event-type">
+                        <option value="">All Types</option>
+                        <option value="military exercise">Military Exercise</option>
+                        <option value="cyber attack">Cyber Attack</option>
+                        <option value="infrastructure incident">Infrastructure Incident</option>
+                        <option value="diplomatic event">Diplomatic Event</option>
+                        <option value="security threat">Security Threat</option>
+                        <option value="terrorist activity">Terrorist Activity</option>
+                        <option value="political instability">Political Instability</option>
+                        <option value="border incident">Border Incident</option>
+                        <option value="weapons development">Weapons Development</option>
+                        <option value="energy security">Energy Security</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filter-country">Country</label>
+                    <input type="text" id="filter-country" placeholder="Filter by country...">
+                </div>
+
+                <button id="apply-filters" class="btn-primary">Apply Filters</button>
+                <button id="reset-filters" class="btn-secondary">Reset</button>
+            </aside>
+
+            <!-- Map Container -->
+            <div class="map-container">
+                <div id="map"></div>
+                
+                <!-- Loading Indicator -->
+                <div id="loading-indicator" class="loading-indicator hidden">
+                    <div class="spinner"></div>
+                    <p>Loading events...</p>
+                </div>
+            </div>
+
+            <!-- Event Details Panel -->
+            <aside class="event-panel hidden" id="event-panel">
+                <div class="panel-header">
+                    <h2>Event Details</h2>
+                    <button id="close-panel" class="btn-close">&times;</button>
+                </div>
+                <div class="panel-content" id="panel-content">
+                    <!-- Event details will be populated here -->
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../src/services/api.js"></script>
+    <script src="../src/components/map.js"></script>
+    <script src="../src/components/filters.js"></script>
+    <script src="../src/components/eventPanel.js"></script>
+    <script src="../src/app.js"></script>
+</body>
+</html>
