@@ -27,6 +27,7 @@ feedparser==6.0.11
 
 # Geocoding
 geopy==2.4.1
+shapely==2.0.6
 
 # Background Tasks
 celery==5.4.0
